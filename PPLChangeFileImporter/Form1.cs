@@ -27,6 +27,7 @@ namespace PPLChangeFileImporter
         string pplFileName;
         string pplFilePath;
         List<ChangedPart> changePartsObjectList = new List<ChangedPart>();
+        List<ChangedPart> changePartsObjectAppendList = new List<ChangedPart>();
         List<string[]> partsChangeList = new List<string[]>();
         List<int> changeRowsIndex = new List<int>();
         List<DataGridViewRow> allRows = new List<DataGridViewRow>();
@@ -45,13 +46,13 @@ namespace PPLChangeFileImporter
         //    public int Delay;
         //}
 
-    //private DataParameter _inputparameter;
+        //private DataParameter _inputparameter;
 
         public FrmPPLChangeImporter()
         {
             InitializeComponent();
         }
-        
+
         private void BtnImportPPL_Click(object sender, EventArgs e)
         {
             try
@@ -78,7 +79,7 @@ namespace PPLChangeFileImporter
                             var result = reader.AsDataSet();
 
                             dgvExcelImport.DataSource = result.Tables[0];
-                           
+
                             List<string> ColNamesList = new List<string>();
                             foreach (DataGridViewRow row in dgvExcelImport.Rows)
                             {
@@ -141,11 +142,11 @@ namespace PPLChangeFileImporter
             try
             {
                 //user browses to folder and selects change file
-                changeFileSelected = new OpenFileDialog
-                {
-                    Filter = "All Files (*.*)|*.*|Text Files (*.txt)|*.txt",
-                    Multiselect = false
-                };
+            changeFileSelected = new OpenFileDialog
+            {
+                Filter = "All Files (*.*)|*.*|Text Files (*.txt)|*.txt",
+                Multiselect = false
+            };
 
                 if (changeFileSelected.ShowDialog() == DialogResult.OK)
                 {
@@ -155,7 +156,9 @@ namespace PPLChangeFileImporter
 
                     partsChangeList = ParseChangeLines(changeLines);
                     partsChangeList = PreFormatPartsChangeList(partsChangeList);
-                    changePartsObjectList = MakeChangePartsObjectList(partsChangeList);
+                    changePartsObjectAppendList = MakeChangePartsObjectList(partsChangeList);
+                    changePartsObjectList.AddRange(changePartsObjectAppendList);
+                    changePartsObjectAppendList.Clear();
 
                     InsertChangeRows();
 
@@ -180,19 +183,40 @@ namespace PPLChangeFileImporter
 
             foreach (string[] part in partsChangeList)
             {
+                //remove multiple lines from part array
+                string[] partArray;
+                List<string> partList = new List<string> { };
+                int KMRsFound = 0;
                 for (int i = 0; i < part.Length; i++)
                 {
-                    lineCode = GetLineCode(part[i]);
+                    if (GetLineCode(part[i]) == "KMR")
+                    {
+                        if (KMRsFound == 0)
+                        {
+                            partList.Add(part[i]);
+                            KMRsFound++;
+                        }
+                    }
+                    else
+                    {
+                        partList.Add(part[i]);
+                    }
+                }
+                partArray = partList.ToArray();
+
+                for (int i = 0; i < partArray.Length; i++)
+                {
+                    lineCode = GetLineCode(partArray[i]);
                     if (lineCode == "KMR" && tempPart.Count > 0)
                     {
                         //Add tempPart to tempPartsChangeList
                         tempPartsChangeList.Add(tempPart.ToArray());
                         tempPart.Clear();
-                        tempPart.Add(part[i]);
+                        tempPart.Add(partArray[i]);
                     }
                     else
                     {
-                        tempPart.Add(part[i]);
+                        tempPart.Add(partArray[i]);
                     }
                 }
             }
@@ -391,7 +415,7 @@ namespace PPLChangeFileImporter
                                 pplWorksheet.Cells[GetExcelColumn(i + 1, counter)].Style.Fill.BackgroundColor.SetColor(Color.LightGreen);
                                 pplWorksheet.Cells[GetExcelColumn(21, counter) + ":" + GetExcelColumn(22, counter)].Style.Fill.PatternType = ExcelFillStyle.Solid;
                                 pplWorksheet.Cells[GetExcelColumn(21, counter) + ":" + GetExcelColumn(22, counter)].Style.Fill.BackgroundColor.SetColor(Color.OrangeRed);
-                            }                            
+                            }
                             pplWorksheet.Cells[GetExcelColumn(i + 1, counter)].Value = row[i];
                         }
                         counter++;
@@ -520,7 +544,7 @@ namespace PPLChangeFileImporter
             }
 
             cell += RowNum;
-                return cell;
+            return cell;
         }
 
         private void BtnReset_Click(object sender, EventArgs e)

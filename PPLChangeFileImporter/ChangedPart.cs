@@ -967,6 +967,11 @@ namespace PPLChangeFileImporter
             for (int i = 0; i < partData.Length; i++)
             {
                 string lineCode = (partData[i][0].ToString() + partData[i][1].ToString() + partData[i][2].ToString());
+                //KMA lines are treated the same as KMR
+                if (lineCode == "KMA")
+                {
+                    lineCode = "KMP";
+                }
                 if (lineCode == partType)
                 {
                     newPartData.Add(partData[i]);
